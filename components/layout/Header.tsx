@@ -3,7 +3,7 @@
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { Heart, LogOut, User, Menu } from 'lucide-react';
+import { Heart, LogOut, User, Menu, Activity } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { useState } from 'react';
@@ -87,6 +87,15 @@ export function Header() {
                   </div>
                 </div>
 
+                {/* IoT Dashboard Link - NEW */}
+                <Link href="/iot-dashboard">
+                  <Button variant="outline" size="sm" className="text-xs lg:text-sm">
+                    <Activity className="h-3 w-3 lg:h-4 lg:w-4 mr-1 lg:mr-2" />
+                    <span className="hidden lg:inline">IoT Monitor</span>
+                    <span className="lg:hidden">IoT</span>
+                  </Button>
+                </Link>
+
                 {/* Dashboard Link */}
                 <Link href={getDashboardPath()}>
                   <Button variant="outline" size="sm" className="text-xs lg:text-sm">
@@ -147,6 +156,14 @@ export function Header() {
 
                 {/* Mobile Navigation Links */}
                 <div className="space-y-2 px-2">
+                  {/* IoT Dashboard Link - NEW */}
+                  <Link href="/iot-dashboard" className="block">
+                    <Button variant="outline" size="sm" className="w-full justify-start text-sm">
+                      <Activity className="h-4 w-4 mr-2" />
+                      IoT Dashboard
+                    </Button>
+                  </Link>
+                  
                   <Link href={getDashboardPath()} className="block">
                     <Button variant="outline" size="sm" className="w-full justify-start text-sm">
                       Dashboard

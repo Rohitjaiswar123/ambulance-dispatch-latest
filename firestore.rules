@@ -114,5 +114,32 @@ service cloud.firestore {
       allow delete: if request.auth != null &&
         exists(/databases/$(database)/documents/ambulance_drivers/$(request.auth.uid));
     }
+    
+    // *** IOT DATA COLLECTIONS - OPEN FOR TESTING ***
+    
+    // Sensor History - COMPLETELY OPEN FOR TESTING
+    match /sensorHistory/{historyId} {
+      allow read, create, update, delete: if true;
+    }
+    
+    // Emergency Detections - COMPLETELY OPEN FOR TESTING
+    match /emergencyDetections/{detectionId} {
+      allow read, create, update, delete: if true;
+    }
+    
+    // IoT Device Status - COMPLETELY OPEN FOR TESTING
+    match /iotDeviceStatus/{deviceId} {
+      allow read, create, update, delete: if true;
+    }
+    
+    // IoT Logs - COMPLETELY OPEN FOR TESTING
+    match /iotLogs/{logId} {
+      allow read, create, update, delete: if true;
+    }
+    
+    // IoT Alerts - COMPLETELY OPEN FOR TESTING
+    match /iotAlerts/{alertId} {
+      allow read, create, update, delete: if true;
+    }
   }
 }

@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>ESP32 Sensor Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: 'Roboto', sans-serif; margin: 0; padding: 20px; background: #f5f5f5; }
+        .dashboard { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+        .card { background: white; border-radius: 8px; padding: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .value { font-size: 24px; font-weight: 500; }
+        .unit { font-size: 14px; color: #666; }
+        #map { height: 300px; width: 100%; }
+    </style>
+</head>
+<body>
+    <h1>Rakshak - Company Dashboard</h1>
+    <div class="dashboard">
+        <div class="card">
+            <h2>GPS Location</h2>
+            <div id="map"></div>
+            <p>Speed: <span id="speed-value" class="value">0</span><span class="unit"> km/h</span></p>
+        </div>
+        
+        <div class="card">
+            <h2>Temperature</h2>
+            <p><span id="temp-value" class="value">--</span><span class="unit"> °C</span></p>
+            <canvas id="temp-chart"></canvas>
+        </div>
+        
+        <div class="card">
+            <h2>Humidity</h2>
+            <p><span id="hum-value" class="value">--</span><span class="unit"> %</span></p>
+            <canvas id="hum-chart"></canvas>
+        </div>
+        
+        <div class="card">
+            <h2>LPG Gas</h2>
+            <p><span id="gas-value" class="value">--</span><span class="unit"> ppm</span></p>
+            <div class="gas-bar"></div>
+        </div>
+    </div>
+    
+    <script src="app.js"></script>
+    <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDMADhR_dUGVQ18XBhiJV07Hk14C5DH3tI&callback=initMap"></script>
+</body>
+</html>

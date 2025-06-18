@@ -24,10 +24,11 @@ import {
 
 export class DatabaseService {
   // Accident operations
-  static async createAccident(accidentData: AccidentCreateData) {
+  static async createAccident(reporterId: string, accidentData: Omit<AccidentCreateData, 'reporterId'>) {
     try {
       const docRef = await addDoc(collection(db, 'accidents'), {
         ...accidentData,
+        reporterId,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       });
@@ -932,6 +933,20 @@ export class DatabaseService {
       return null;
     } catch (error) {
       console.error('Error getting assignment:', error);
+      throw error;
+    }
+  }
+
+  static async updateDocument(collectionName: string, documentId: string, data: any) {
+    try {
+      const docRef = doc(db, collectionName, documentId);
+      await updateDoc(docRef, {
+        ...data,
+        updatedAt: serverTimestamp(),
+      });
+      console.log(`✅ Updated document ${documentId} in ${collectionName}`);
+    } catch (error) {
+      console.error(`❌ Error updating document in ${collectionName}:`, error);
       throw error;
     }
   }
