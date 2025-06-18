@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { MapPin, AlertCircle, Target } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import MapLocationPicker from '@/components/maps/MapLocationPicker';
+
 import { EmergencyModalProps } from '@/types';
 import EmergencyLocationPicker from '@/components/maps/EmergencyLocationPicker';
 
