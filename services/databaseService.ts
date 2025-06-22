@@ -22,10 +22,15 @@ import {
 } from '@/types';
 
 export class DatabaseService {
-  // FIXED: Simplified accident creation method
+  // FIXED: Enhanced accident creation method with better logging
   static async createAccident(accidentData: any) {
     try {
-      console.log('🚨 Creating accident with data:', accidentData);
+      console.log('🚨 Creating accident with data:', {
+        reporterId: accidentData.reporterId,
+        severity: accidentData.severity,
+        location: accidentData.location,
+        isIoTGenerated: !!accidentData.iotEmergencyId
+      });
       
       const docRef = await addDoc(collection(db, 'accidents'), {
         ...accidentData,
@@ -35,6 +40,8 @@ export class DatabaseService {
       });
       
       console.log('✅ Accident created successfully with ID:', docRef.id);
+      console.log('📧 Accident reporterId:', accidentData.reporterId);
+      
       return docRef.id;
     } catch (error) {
       console.error('❌ Error creating accident:', error);
@@ -391,22 +398,31 @@ export class DatabaseService {
     }
   }
 
-  // Add this method to get accidents by reporter
+  // Get accidents for a specific user (including IoT-generated ones)
   static async getAccidentsByReporter(reporterId: string): Promise<Accident[]> {
     try {
+      console.log('🔍 Getting accidents for reporter:', reporterId);
+      
       const q = query(
         collection(db, 'accidents'),
         where('reporterId', '==', reporterId),
         orderBy('timestamp', 'desc')
       );
+      
       const querySnapshot = await getDocs(q);
-
-      return querySnapshot.docs.map(doc => ({
+      const accidents = querySnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       })) as Accident[];
+      
+      console.log(`✅ Found ${accidents.length} accidents for reporter ${reporterId}`);
+      accidents.forEach(accident => {
+        console.log(`📋 Accident ${accident.id}: ${accident.severity} - ${accident.description.substring(0, 50)}...`);
+      });
+      
+      return accidents;
     } catch (error) {
-      console.error('Error getting accidents by reporter:', error);
+      console.error('❌ Error getting accidents by reporter:', error);
       throw error;
     }
   }

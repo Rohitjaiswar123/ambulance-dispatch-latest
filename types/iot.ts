@@ -2,10 +2,13 @@ import { Timestamp } from 'firebase/firestore';
 
 // ESP32 Device Constants
 export const IOT_DEVICE = {
-  ID: "ESP32_MAIN",
-  NAME: "Main Emergency Vehicle Sensor",
-  ASSIGNED_USER: "hsinghjayesh@gmail.com"
-} as const;
+  ID: 'ESP32_RAKSHAK_001',
+  NAME: 'Rakshak Emergency Sensor',
+  LOCATION: 'Vehicle Mounted',
+  ASSIGNED_USER: 'hsinghjayesh@gmail.com', // Your email
+  ASSIGNED_USER_ID: 'USER_ID_FOR_HSINGHJAYESH', // We'll get this dynamically
+  CONTACT_NUMBER: '+91-9876543210'
+};
 
 // ESP32 Real-time Data Structure (matches your Rakshak app.js)
 export interface ESP32SensorData {

@@ -5,10 +5,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { useAuth } from '@/hooks/useAuth';
-import { useRouter } from 'next/navigation';
-import { useToast } from '@/hooks/use-toast';
-import { LogOut } from 'lucide-react';
 import IoTRealtimeService from '@/services/iotRealtimeService';
 import SensorHistoryService from '@/services/sensorHistoryService';
 import EmergencyDetectionService from '@/services/emergencyDetectionService';
@@ -22,10 +18,6 @@ interface IoTDashboardProps {
 export const IoTDashboard: React.FC<IoTDashboardProps> = ({ 
   showEmergencyControls = false 
 }) => {
-  const { logout } = useAuth();
-  const router = useRouter();
-  const { toast } = useToast();
-  
   const [isConnected, setIsConnected] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [sensorData, setSensorData] = useState<ESP32SensorData | null>(null);
@@ -41,23 +33,6 @@ export const IoTDashboard: React.FC<IoTDashboardProps> = ({
   const iotService = IoTRealtimeService.getInstance();
   const historyService = SensorHistoryService.getInstance();
   const emergencyService = EmergencyDetectionService.getInstance();
-
-  const handleLogout = async () => {
-    try {
-      await logout();
-      toast({
-        title: "Success",
-        description: "Logged out successfully",
-      });
-      router.push('/');
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to logout",
-        variant: "destructive",
-      });
-    }
-  };
 
   const startMonitoring = async () => {
     setIsLoading(true);
@@ -142,20 +117,37 @@ export const IoTDashboard: React.FC<IoTDashboardProps> = ({
 
   const checkEmergencies = async () => {
     try {
+      console.log('🔍 Checking for emergencies...');
       const currentData = iotService.getCurrentData();
+      
+      console.log('📊 Current IoT data for emergency check:', {
+        sensor: currentData.sensor,
+        gps: currentData.gps,
+        mpu6050: currentData.mpu6050
+      });
+      
+      if (!currentData.sensor || !currentData.gps || !currentData.mpu6050) {
+        console.log('⚠️ Incomplete data - skipping emergency check');
+        return;
+      }
+      
       const emergencies = await emergencyService.monitorSensorData(currentData);
       
       if (emergencies.length > 0) {
+        console.log(`🚨 ${emergencies.length} emergencies detected!`);
+        
         const alerts = emergencies.map(e => 
           `🚨 ${e.triggerType.toUpperCase()}: ${e.triggerValue.toLocaleString()} (Threshold: ${e.threshold.toLocaleString()})`
         );
         setEmergencyAlerts(prev => [...prev, ...alerts].slice(-5));
         
-        alerts.forEach(alert => {
+        alerts.forEach((alert, index) => {
           setTimeout(() => {
             setEmergencyAlerts(prev => [...prev, `✅ Auto-created accident report for: ${alert}`].slice(-5));
-          }, 2000);
+          }, 2000 + (index * 1000));
         });
+      } else {
+        console.log('✅ No emergencies detected');
       }
     } catch (error) {
       console.error('❌ Error checking emergencies:', error);
@@ -211,6 +203,7 @@ export const IoTDashboard: React.FC<IoTDashboardProps> = ({
     if (level > EMERGENCY_THRESHOLDS.GAS_WARNING) return 'bg-orange-500';
     return 'bg-green-500';
   };
+
   const getTemperatureColor = (temp: number) => {
     if (temp > EMERGENCY_THRESHOLDS.TEMPERATURE_CRITICAL) return 'text-red-600 bg-red-50';
     if (temp > EMERGENCY_THRESHOLDS.TEMPERATURE_WARNING) return 'text-orange-600 bg-orange-50';
@@ -251,7 +244,7 @@ export const IoTDashboard: React.FC<IoTDashboardProps> = ({
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
-            <span>🚑 Rakshak IoT Dashboard - Real ESP32 Device Only</span>
+            🚑 Rakshak IoT Dashboard - Real ESP32 Device Only
             <div className="flex items-center gap-2">
               <Badge variant={isConnected ? "default" : "secondary"}>
                 {isConnected ? "🟢 ESP32 Connected" : "🔴 ESP32 Offline"}
@@ -259,10 +252,6 @@ export const IoTDashboard: React.FC<IoTDashboardProps> = ({
               <Badge variant={historyEnabled ? "default" : "outline"}>
                 {historyEnabled ? "📊 History ON" : "📊 History OFF"}
               </Badge>
-              <Button variant="outline" size="sm" onClick={handleLogout}>
-                <LogOut className="h-4 w-4 mr-2" />
-                Logout
-              </Button>
             </div>
           </CardTitle>
           <CardDescription>
