@@ -6,7 +6,7 @@ export interface User {
   name: string;
   email: string;
   phoneNumber: string;
-  role: 'vehicle_driver' | 'ambulance_driver' | 'hospital_admin';
+  role: 'vehicle_driver' | 'ambulance_driver' | 'hospital_admin' | 'admin' | 'user';
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }
@@ -137,14 +137,11 @@ export interface Assignment {
   accidentId: string;
   ambulanceDriverId: string;
   hospitalId: string;
-  status: 'accepted' | 'en_route' | 'arrived' | 'completed' | 'cancelled';
-  estimatedArrivalTime?: number;
-  driverLocation?: {
-    latitude: number;
-    longitude: number;
-  };
-  cancellationReason?: string;
-  cancelledAt?: Timestamp;
+  status: 'pending' | 'accepted' | 'in_progress' | 'completed' | 'cancelled';
+  assignedAt: Timestamp;
+  acceptedAt?: Timestamp;
+  completedAt?: Timestamp;
+  notes?: string;
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }

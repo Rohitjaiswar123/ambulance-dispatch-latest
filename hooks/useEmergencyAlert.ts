@@ -3,9 +3,8 @@
 import { useState, useCallback } from 'react';
 import { EmergencyAlertState } from '@/types';
 import { DatabaseService } from '@/services/databaseService';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { serverTimestamp } from 'firebase/firestore';
 
 export function useEmergencyAlert() {
   const { user } = useAuth();
@@ -40,35 +39,48 @@ export function useEmergencyAlert() {
     try {
       console.log('🚨 Reporting emergency:', emergencyData);
       
-      // Create accident record
-      const accidentId = await DatabaseService.createAccident({
+      // Create accident record with proper structure
+      const accidentData = {
         reporterId: user.id,
         location: emergencyData.location,
         description: emergencyData.description,
         severity: emergencyData.severity,
+        status: 'pending',
         injuredCount: emergencyData.injuredCount,
         vehiclesInvolved: emergencyData.vehiclesInvolved,
-        additionalInfo: emergencyData.additionalInfo,
+        additionalInfo: emergencyData.additionalInfo || '',
         contactNumber: emergencyData.contactNumber,
-        status: 'pending',
-        timestamp: serverTimestamp() as any,
-      });
+      };
 
+      const accidentId = await DatabaseService.createAccident(accidentData);
       console.log('✅ Emergency created with ID:', accidentId);
 
-      // Notify nearby hospitals automatically
-      await notifyNearbyHospitals(accidentId, emergencyData.location);
-
+      // Update state immediately after successful creation
       setState({
         isReporting: false,
         isEmergencyActive: true,
         accidentId,
       });
 
+      // Show success toast
       toast({
         title: "Emergency Reported Successfully! 🚨",
-        description: "Your emergency has been reported and nearby hospitals have been notified. For immediate help, call 108 (Ambulance) or 112 (National Emergency).",
+        description: "Your emergency has been reported. Notifying nearby hospitals...",
       });
+
+      // Notify nearby hospitals in background (don't wait for it)
+      notifyNearbyHospitals(accidentId, emergencyData.location)
+        .then(() => {
+          console.log('✅ Hospital notification completed');
+          toast({
+            title: "Hospitals Notified! 🏥",
+            description: "Nearby hospitals have been alerted about your emergency.",
+          });
+        })
+        .catch((error) => {
+          console.warn('⚠️ Hospital notification failed:', error);
+          // Don't show error toast as the emergency was still reported successfully
+        });
 
       return accidentId;
     } catch (error) {
@@ -99,25 +111,27 @@ export function useEmergencyAlert() {
       console.log(`📍 Found ${nearbyHospitals.length} nearby hospitals`);
 
       if (nearbyHospitals.length > 0) {
-        // Update accident status to indicate hospitals have been notified
+        // First, update accident status to indicate hospitals are being notified
         await DatabaseService.updateAccidentStatus(accidentId, 'hospital_notified');
+        console.log('✅ Updated accident status to hospital_notified');
 
         // Create hospital notifications
-        const notificationPromises = nearbyHospitals.map(hospital => 
-          DatabaseService.createHospitalNotification({
+        const notificationPromises = nearbyHospitals.map(hospital => {
+          const distance = DatabaseService.calculateDistance(
+            location.latitude,
+            location.longitude,
+            hospital.location.latitude,
+            hospital.location.longitude
+          );
+
+          return DatabaseService.createHospitalNotification({
             accidentId,
             hospitalId: hospital.id,
             type: 'emergency_nearby',
             status: 'pending',
-            distance: DatabaseService.calculateDistance(
-              location.latitude,
-              location.longitude,
-              hospital.location.latitude,
-              hospital.location.longitude
-            )
-          })
-        );
-
+            distance: Math.round(distance * 100) / 100, // Round to 2 decimal places
+          });
+        });
         await Promise.all(notificationPromises);
         console.log(`✅ Successfully notified ${nearbyHospitals.length} hospitals`);
       } else {
@@ -126,7 +140,7 @@ export function useEmergencyAlert() {
       }
     } catch (error) {
       console.error('❌ Error notifying hospitals:', error);
-      // Don't throw here - emergency is still reported even if hospital notification fails
+      throw error;
     }
   };
 

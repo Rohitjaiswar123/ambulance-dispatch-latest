@@ -197,14 +197,12 @@ export class EmergencyDetectionService {
         additionalInfo: `Auto-generated from IoT sensor detection. Device: ${emergency.deviceId}. Trigger: ${emergency.triggerType} (${emergency.triggerValue} > ${emergency.threshold})`,
         contactNumber: IOT_DEVICE.ASSIGNED_USER,
         status: 'pending' as const,
-        timestamp: Timestamp.now()
+        timestamp: Timestamp.now(),
+        createdBy: 'SYSTEM_IOT' // System-generated accident
       };
 
       // Create accident using existing database service
-      const accidentId = await DatabaseService.createAccident(
-        'SYSTEM_IOT', // System-generated accident
-        accidentData
-      );
+      const accidentId = await DatabaseService.createAccident(accidentData);
 
       if (accidentId) {
         // Update emergency detection with accident ID
@@ -219,7 +217,6 @@ export class EmergencyDetectionService {
       console.error('❌ Error creating accident from emergency:', error);
     }
   }
-
   // Generate human-readable accident description
   private generateAccidentDescription(emergency: EmergencyDetection): string {
     const location = emergency.sensorSnapshot.location;

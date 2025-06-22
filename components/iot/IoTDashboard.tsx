@@ -5,6 +5,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { useAuth } from '@/hooks/useAuth';
+import { useRouter } from 'next/navigation';
+import { useToast } from '@/hooks/use-toast';
+import { LogOut } from 'lucide-react';
 import IoTRealtimeService from '@/services/iotRealtimeService';
 import SensorHistoryService from '@/services/sensorHistoryService';
 import EmergencyDetectionService from '@/services/emergencyDetectionService';
@@ -18,6 +22,10 @@ interface IoTDashboardProps {
 export const IoTDashboard: React.FC<IoTDashboardProps> = ({ 
   showEmergencyControls = false 
 }) => {
+  const { logout } = useAuth();
+  const router = useRouter();
+  const { toast } = useToast();
+  
   const [isConnected, setIsConnected] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [sensorData, setSensorData] = useState<ESP32SensorData | null>(null);
@@ -27,10 +35,29 @@ export const IoTDashboard: React.FC<IoTDashboardProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [emergencyAlerts, setEmergencyAlerts] = useState<string[]>([]);
   const [historyEnabled, setHistoryEnabled] = useState(false); // Add toggle for history
+  const [lastDataTime, setLastDataTime] = useState<number | null>(null);
+  const [isReallyConnected, setIsReallyConnected] = useState(false);
 
   const iotService = IoTRealtimeService.getInstance();
   const historyService = SensorHistoryService.getInstance();
   const emergencyService = EmergencyDetectionService.getInstance();
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      toast({
+        title: "Success",
+        description: "Logged out successfully",
+      });
+      router.push('/');
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to logout",
+        variant: "destructive",
+      });
+    }
+  };
 
   const startMonitoring = async () => {
     setIsLoading(true);
@@ -49,8 +76,15 @@ export const IoTDashboard: React.FC<IoTDashboardProps> = ({
       iotService.startListening({
         onSensorUpdate: async (data) => {
           setSensorData(data);
-          setLastUpdate(new Date());
+          const now = Date.now();
+          setLastUpdate(new Date(now));
+          setLastDataTime(now);
+          
+          // Check if this is fresh data (within last 2 minutes)
+          const isFresh = now - (lastDataTime || 0) > 5000; // 5 seconds between updates
+          setIsReallyConnected(isFresh);
           setIsConnected(true);
+          
           await checkEmergencies();
         },
         onGPSUpdate: (data) => {
@@ -155,12 +189,28 @@ export const IoTDashboard: React.FC<IoTDashboardProps> = ({
     };
   }, []);
 
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (lastDataTime) {
+        const age = Date.now() - lastDataTime;
+        const maxAge = 120000; // 2 minutes
+        
+        if (age > maxAge) {
+          console.log('🔴 Data is stale, device likely offline');
+          setIsReallyConnected(false);
+          setIsConnected(false);
+        }
+      }
+    }, 30000); // Check every 30 seconds
+
+    return () => clearInterval(interval);
+  }, [lastDataTime]);
+
   const getGasLevelColor = (level: number) => {
     if (level > EMERGENCY_THRESHOLDS.GAS_CRITICAL) return 'bg-red-500';
     if (level > EMERGENCY_THRESHOLDS.GAS_WARNING) return 'bg-orange-500';
     return 'bg-green-500';
   };
-
   const getTemperatureColor = (temp: number) => {
     if (temp > EMERGENCY_THRESHOLDS.TEMPERATURE_CRITICAL) return 'text-red-600 bg-red-50';
     if (temp > EMERGENCY_THRESHOLDS.TEMPERATURE_WARNING) return 'text-orange-600 bg-orange-50';
@@ -201,7 +251,7 @@ export const IoTDashboard: React.FC<IoTDashboardProps> = ({
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
-            🚑 Rakshak IoT Dashboard - Real ESP32 Device Only
+            <span>🚑 Rakshak IoT Dashboard - Real ESP32 Device Only</span>
             <div className="flex items-center gap-2">
               <Badge variant={isConnected ? "default" : "secondary"}>
                 {isConnected ? "🟢 ESP32 Connected" : "🔴 ESP32 Offline"}
@@ -209,6 +259,10 @@ export const IoTDashboard: React.FC<IoTDashboardProps> = ({
               <Badge variant={historyEnabled ? "default" : "outline"}>
                 {historyEnabled ? "📊 History ON" : "📊 History OFF"}
               </Badge>
+              <Button variant="outline" size="sm" onClick={handleLogout}>
+                <LogOut className="h-4 w-4 mr-2" />
+                Logout
+              </Button>
             </div>
           </CardTitle>
           <CardDescription>
@@ -332,7 +386,7 @@ export const IoTDashboard: React.FC<IoTDashboardProps> = ({
                     {getTemperatureStatus(sensorData.temperature)}
                   </div>
                   <div className="text-xs text-gray-500 mt-1">
-                    Critical: &gt;{EMERGENCY_THRESHOLDS.TEMPERATURE_CRITICAL}°C
+                    Critical: {`>${EMERGENCY_THRESHOLDS.TEMPERATURE_CRITICAL}°C`}
                   </div>
                 </CardContent>
               </Card>
@@ -562,21 +616,21 @@ export const IoTDashboard: React.FC<IoTDashboardProps> = ({
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
             <div>
               <div className="font-semibold text-red-700">🌡️ Temperature</div>
-              <div>Critical: &gt;{EMERGENCY_THRESHOLDS.TEMPERATURE_CRITICAL}°C</div>
-              <div>Warning: &gt;{EMERGENCY_THRESHOLDS.TEMPERATURE_WARNING}°C</div>
+              <div>Critical: {`>${EMERGENCY_THRESHOLDS.TEMPERATURE_CRITICAL}`}°C</div>
+              <div>Warning: {`>${EMERGENCY_THRESHOLDS.TEMPERATURE_WARNING}`}°C</div>
             </div>
             <div>
               <div className="font-semibold text-yellow-700">⚠️ Gas Level</div>
-              <div>Critical: &gt;{(EMERGENCY_THRESHOLDS.GAS_CRITICAL / 1000000).toFixed(1)}M PPM</div>
-              <div>Warning: &gt;{(EMERGENCY_THRESHOLDS.GAS_WARNING / 1000000).toFixed(1)}M PPM</div>
+              <div>Critical: {`>${EMERGENCY_THRESHOLDS.GAS_CRITICAL.toLocaleString()}`} PPM</div>
+              <div>Warning: {`>${EMERGENCY_THRESHOLDS.GAS_WARNING.toLocaleString()}`} PPM</div>
             </div>
             <div>
               <div className="font-semibold text-orange-700">💥 Crash Detection</div>
-              <div>G-Force: &gt;{EMERGENCY_THRESHOLDS.CRASH_ACCELERATION}G</div>
+              <div>G-Force: {`>${EMERGENCY_THRESHOLDS.CRASH_ACCELERATION}`}G</div>
             </div>
             <div>
               <div className="font-semibold text-purple-700">🚗 Speed Alert</div>
-              <div>Sudden Stop: &lt;{EMERGENCY_THRESHOLDS.SPEED_SUDDEN_STOP} km/h</div>
+              <div>Sudden Stop: {`<${EMERGENCY_THRESHOLDS.SPEED_SUDDEN_STOP}`} km/h</div>
             </div>
           </div>
         </CardContent>
@@ -609,4 +663,3 @@ export const IoTDashboard: React.FC<IoTDashboardProps> = ({
 };
 
 export default IoTDashboard;
-

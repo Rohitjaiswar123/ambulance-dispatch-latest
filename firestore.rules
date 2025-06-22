@@ -5,51 +5,43 @@ service cloud.firestore {
     // Users can read/write their own user document and create new ones
     match /users/{userId} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
-      // Allow reading other users for system operations
       allow read: if request.auth != null;
-      // Allow creation of new user documents
       allow create: if request.auth != null;
     }
     
     // Vehicle drivers can read/write their own data and register
     match /vehicle_drivers/{userId} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
-      // Allow reading for system operations
       allow read: if request.auth != null;
-      // Allow creation for registration
       allow create: if request.auth != null && request.auth.uid == userId;
     }
     
     // Ambulance drivers can read/write their own data and register
     match /ambulance_drivers/{userId} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
-      // Allow reading for system operations
       allow read: if request.auth != null;
-      // Allow creation for registration
       allow create: if request.auth != null && request.auth.uid == userId;
     }
     
     // Hospital admins can read/write their own data and register
     match /hospital_admins/{userId} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
-      // Allow reading for system operations (to check if user is hospital admin)
       allow read: if request.auth != null;
-      // Allow creation for registration
       allow create: if request.auth != null && request.auth.uid == userId;
     }
     
-    // Accidents - enhanced rules for CRUD operations
+    // FIXED: Accidents - Allow full CRUD for authenticated users
     match /accidents/{accidentId} {
+      // Anyone authenticated can create accidents (for IoT devices and manual reports)
       allow create: if request.auth != null;
-      // Allow all authenticated users to read accidents (needed for hospital dashboard)
+      
+      // Anyone authenticated can read accidents
       allow read: if request.auth != null;
-      allow update: if request.auth != null &&
-        (
-          request.auth.uid == resource.data.reporterId ||
-          exists(/databases/$(database)/documents/hospital_admins/$(request.auth.uid)) ||
-          exists(/databases/$(database)/documents/ambulance_drivers/$(request.auth.uid))
-        );
-      // Allow delete only for the reporter and only if status is 'pending' or 'hospital_notified'
+      
+      // FIXED: Allow updates for emergency reporting system
+      allow update: if request.auth != null;
+      
+      // Allow delete only for the reporter and only if status allows it
       allow delete: if request.auth != null && 
         request.auth.uid == resource.data.reporterId &&
         (resource.data.status == 'pending' || resource.data.status == 'hospital_notified');
@@ -115,31 +107,13 @@ service cloud.firestore {
         exists(/databases/$(database)/documents/ambulance_drivers/$(request.auth.uid));
     }
     
-    // *** IOT DATA COLLECTIONS - OPEN FOR TESTING ***
+    // Remove IoT-related rules since you've refactored them out
+    // (Commented out the IoT sections)
     
-    // Sensor History - COMPLETELY OPEN FOR TESTING
-    match /sensorHistory/{historyId} {
-      allow read, create, update, delete: if true;
-    }
-    
-    // Emergency Detections - COMPLETELY OPEN FOR TESTING
-    match /emergencyDetections/{detectionId} {
-      allow read, create, update, delete: if true;
-    }
-    
-    // IoT Device Status - COMPLETELY OPEN FOR TESTING
-    match /iotDeviceStatus/{deviceId} {
-      allow read, create, update, delete: if true;
-    }
-    
-    // IoT Logs - COMPLETELY OPEN FOR TESTING
-    match /iotLogs/{logId} {
-      allow read, create, update, delete: if true;
-    }
-    
-    // IoT Alerts - COMPLETELY OPEN FOR TESTING
-    match /iotAlerts/{alertId} {
-      allow read, create, update, delete: if true;
+    // Admins collection - only readable by authenticated users
+    match /admins/{adminEmail} {
+      allow read: if request.auth != null;
+      allow write: if false; // Only server-side can write
     }
   }
 }

@@ -143,30 +143,36 @@ export class IoTRealtimeService {
   async testConnection(): Promise<boolean> {
     return new Promise((resolve) => {
       const testRef = ref(realtimeDb, 'sensor/temperature');
+      let firstValue: number | null = null;
+      let changeDetected = false;
       let unsubscribe: (() => void) | null = null;
       
-      // Set timeout first
       const timeout = setTimeout(() => {
         if (unsubscribe) unsubscribe();
-        console.log('🧪 Connection test timeout');
-        resolve(false);
-      }, 10000);
+        console.log('🧪 Connection test - No data changes detected, device likely offline');
+        resolve(changeDetected);
+      }, 15000); // Wait 15 seconds for data changes
 
-      // Create listener
       unsubscribe = onValue(testRef, (snapshot) => {
         const value = snapshot.val();
-        console.log('🧪 Connection test - Temperature value:', value);
         
-        clearTimeout(timeout);
-        if (unsubscribe) unsubscribe();
-        
-        resolve(value !== null && value !== undefined);
+        if (value !== null && value !== undefined) {
+          if (firstValue === null) {
+            firstValue = value;
+            console.log('🧪 First temperature value:', value);
+          } else if (Math.abs(value - firstValue) > 0.1) { // Temperature changed by more than 0.1°C
+            console.log('🧪 Temperature change detected:', firstValue, '→', value);
+            changeDetected = true;
+            
+            clearTimeout(timeout);
+            if (unsubscribe) unsubscribe();
+            resolve(true);
+          }
+        }
       }, (error) => {
-        console.error('❌ Connection test failed:', error);
-        
         clearTimeout(timeout);
+        console.error('❌ Connection test failed:', error);
         if (unsubscribe) unsubscribe();
-        
         resolve(false);
       });
     });

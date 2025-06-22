@@ -15,7 +15,8 @@ import {
   MapPin,
   Phone,
   Users,
-  Loader2
+  Loader2,
+  Settings // Add Settings icon for admin
 } from 'lucide-react';
 
 export default function HomePage() {
@@ -40,8 +41,17 @@ export default function HomePage() {
         case 'hospital_admin':
           router.push('/hospital-dashboard');
           break;
+        case 'admin':
+          router.push('/iot-dashboard'); // Redirect admin to IoT dashboard
+          break;
+        case 'user':
+          // Handle regular user role if needed
+          router.push('/dashboard');
+          break;
         default:
           console.error('Unknown user role:', user.role);
+          // Instead of just logging, redirect to a default page or show error
+          router.push('/login'); // Redirect to login for unknown roles
       }
     }
   }, [user, loading, router]);
@@ -78,13 +88,16 @@ export default function HomePage() {
               <div className="animate-spin rounded-full h-16 w-16 border-4 border-red-200 border-t-red-600 mx-auto"></div>
               <Heart className="absolute inset-0 m-auto h-6 w-6 text-red-600 animate-pulse" />
             </div>
-            <p className="mt-6 text-slate-600 font-medium">Redirecting to dashboard...</p>
+            <p className="mt-6 text-slate-600 font-medium">
+              {user.role === 'admin' ? 'Redirecting to Admin Dashboard...' : 'Redirecting to dashboard...'}
+            </p>
           </div>
         </div>
       </div>
     );
   }
 
+  // Rest of your component remains the same...
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-red-50 to-orange-50">
       <Header />

@@ -11,7 +11,6 @@ import {
   orderBy,
   serverTimestamp,
   Timestamp,
-  GeoPoint
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 import {
@@ -23,18 +22,22 @@ import {
 } from '@/types';
 
 export class DatabaseService {
-  // Accident operations
-  static async createAccident(reporterId: string, accidentData: Omit<AccidentCreateData, 'reporterId'>) {
+  // FIXED: Simplified accident creation method
+  static async createAccident(accidentData: any) {
     try {
+      console.log('🚨 Creating accident with data:', accidentData);
+      
       const docRef = await addDoc(collection(db, 'accidents'), {
         ...accidentData,
-        reporterId,
+        timestamp: serverTimestamp(),
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       });
+      
+      console.log('✅ Accident created successfully with ID:', docRef.id);
       return docRef.id;
     } catch (error) {
-      console.error('Error creating accident:', error);
+      console.error('❌ Error creating accident:', error);
       throw error;
     }
   }
@@ -56,13 +59,17 @@ export class DatabaseService {
 
   static async updateAccidentStatus(accidentId: string, status: Accident['status']) {
     try {
+      console.log(`🔄 Updating accident ${accidentId} status to: ${status}`);
+      
       const docRef = doc(db, 'accidents', accidentId);
       await updateDoc(docRef, {
         status,
         updatedAt: serverTimestamp(),
       });
+      
+      console.log(`✅ Successfully updated accident ${accidentId} status to: ${status}`);
     } catch (error) {
-      console.error('Error updating accident status:', error);
+      console.error('❌ Error updating accident status:', error);
       throw error;
     }
   }
@@ -71,56 +78,34 @@ export class DatabaseService {
     try {
       console.log(`🔍 Starting delete process for accident: ${accidentId}`);
       
-      // First check if accident can be deleted
       const accident = await this.getAccident(accidentId);
       if (!accident) {
         throw new Error('Accident not found');
       }
       
-      console.log(`📋 Accident details:`, {
-        id: accident.id,
-        status: accident.status,
-        reporterId: accident.reporterId,
-        description: accident.description?.substring(0, 50) + '...'
-      });
-      
-      // Allow deletion for pending and hospital_notified status
       const deletableStatuses = ['pending', 'hospital_notified'];
       if (!deletableStatuses.includes(accident.status)) {
         throw new Error(`Cannot delete accident with status: ${accident.status}. Only pending or hospital_notified accidents can be deleted.`);
       }
       
-      console.log(`✅ Accident status ${accident.status} is deletable`);
-      console.log(`🗑️ Proceeding to delete accident ${accidentId}`);
-      
-      // Delete the accident document
       const docRef = doc(db, 'accidents', accidentId);
       await deleteDoc(docRef);
       
       console.log(`✅ Successfully deleted accident document ${accidentId}`);
       
-      // Also delete any related notifications if they exist
+      // Clean up related notifications
       try {
-        console.log(`🔍 Looking for related notifications for accident ${accidentId}`);
-        
         const notificationsQuery = query(
           collection(db, 'hospital_notifications'),
           where('accidentId', '==', accidentId)
         );
         const notificationsSnapshot = await getDocs(notificationsQuery);
         
-        console.log(`📋 Found ${notificationsSnapshot.docs.length} related notifications`);
-        
-        // Delete all related notifications
-        const deletePromises = notificationsSnapshot.docs.map(doc => {
-          console.log(`🗑️ Deleting notification: ${doc.id}`);
-          return deleteDoc(doc.ref);
-        });
+        const deletePromises = notificationsSnapshot.docs.map(doc => deleteDoc(doc.ref));
         await Promise.all(deletePromises);
         
         console.log(`✅ Successfully deleted accident ${accidentId} and ${notificationsSnapshot.docs.length} related notifications`);
       } catch (notificationError) {
-        // If notifications don't exist or there's an error, just log it but don't fail the deletion
         console.log(`⚠️ Could not delete notifications for accident ${accidentId}:`, notificationError);
       }
       
