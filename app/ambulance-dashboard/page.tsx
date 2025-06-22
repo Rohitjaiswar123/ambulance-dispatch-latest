@@ -182,14 +182,14 @@ export default function AmbulanceDashboardPage() {
         let accidentStatus: Accident['status'] = 'assigned';
         
         switch (newStatus) {
-          case 'en_route':
-            accidentStatus = 'in_progress';
-            break;
-          case 'arrived':
+          case 'in_progress':
             accidentStatus = 'in_progress';
             break;
           case 'completed':
             accidentStatus = 'completed';
+            break;
+          default:
+            accidentStatus = 'in_progress';
             break;
         }
         
@@ -323,8 +323,7 @@ export default function AmbulanceDashboardPage() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'completed': return 'bg-green-500';
-      case 'arrived': return 'bg-blue-500';
-      case 'en_route': return 'bg-purple-500';
+      case 'in_progress': return 'bg-blue-500';
       case 'accepted': return 'bg-orange-500';
       default: return 'bg-gray-500';
     }
@@ -379,7 +378,8 @@ export default function AmbulanceDashboardPage() {
               ) : (
                 <div className="grid gap-3 sm:gap-4">
                   {activeAssignments.map((assignment) => (
-                    <Card key={assignment.id} className="border-l-4 border-l-red-500">
+                    <Card key={assignment.id} className="border-l-4 border-l
+-red-500">
                       <CardHeader className="pb-2 sm:pb-3">
                         <div className="flex flex-col space-y-2 sm:space-y-0 sm:flex-row sm:justify-between sm:items-start">
                           <CardTitle className="text-sm sm:text-base lg:text-lg">Assignment #{assignment.id.slice(-6)}</CardTitle>
@@ -404,30 +404,19 @@ export default function AmbulanceDashboardPage() {
                         
                         {/* Action Buttons */}
                         <div className="flex flex-col space-y-2 sm:space-y-0 sm:flex-row sm:flex-wrap sm:gap-2">
-                          {/* Status Update Buttons */}
+                          {/* Status Update Buttons - Using only valid Assignment status values */}
                           {assignment.status === 'accepted' && (
                             <Button 
                               size="sm"
-                              onClick={() => updateAssignmentStatus(assignment.id, 'en_route')}
+                              onClick={() => updateAssignmentStatus(assignment.id, 'in_progress')}
                               className="bg-purple-600 hover:bg-purple-700 w-full sm:w-auto text-xs"
                             >
                               <Navigation className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                              En Route
+                              Start Journey
                             </Button>
                           )}
                           
-                          {assignment.status === 'en_route' && (
-                            <Button 
-                              size="sm"
-                              onClick={() => updateAssignmentStatus(assignment.id, 'arrived')}
-                              className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto text-xs"
-                            >
-                              <MapPin className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                              Arrived
-                            </Button>
-                          )}
-                          
-                          {assignment.status === 'arrived' && (
+                          {assignment.status === 'in_progress' && (
                             <Button 
                               size="sm"
                               onClick={() => updateAssignmentStatus(assignment.id, 'completed')}
@@ -493,7 +482,7 @@ export default function AmbulanceDashboardPage() {
                     <p className="text-xs sm:text-sm text-gray-400 mt-2">
                       Emergency requests will appear here after hospitals approve them
                     </p>
-                    </CardContent>
+                  </CardContent>
                 </Card>
               ) : (
                 <div className="grid gap-3 sm:gap-4 lg:gap-6">
