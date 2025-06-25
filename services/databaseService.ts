@@ -36,7 +36,7 @@ export class DatabaseService {
         ...accidentData,
         timestamp: serverTimestamp(),
         createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
+        updatedAt: serverTimestamp()vbkjbjbdv,
       });
       
       console.log('✅ Accident created successfully with ID:', docRef.id);
